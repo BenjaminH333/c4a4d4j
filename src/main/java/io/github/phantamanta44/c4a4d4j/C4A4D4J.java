@@ -10,12 +10,14 @@ public class C4A4D4J extends CommandEngine<CmdCtx> {
 
     public static final EngineDescriptor<CmdCtx, C4A4D4J> DESCRIPTOR = new EngineDescriptor<>("D4J Command Engine", C4A4D4J.class.getName());
 
+    @Override
     protected Prerequisite<CmdCtx> resolvePrereq(String prereq) {
         return new PrereqParser(prereq).getPrereq();
     }
 
-    protected IArgumentTokenizer tokenize(String[] args) {
-        return new ArgParser(args);
+    @Override
+    protected IArgumentTokenizer tokenize(String[] args, CmdCtx ctx) {
+        return new ArgParser(args, ctx, this);
     }
 
 }
