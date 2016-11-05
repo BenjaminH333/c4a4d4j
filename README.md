@@ -44,3 +44,7 @@ These are the possible types for automatic command argument resolvation:
 * `CodeBlock`
 * `InlineCodeBlock`
 * `CommandExecution`
+
+There are also some special arguments that aren't parsed from the user's input, but instead supply data about the command execution environment.
+* `String[]` supplies the original argument list passed by the user.
+* `CmdCtx` supplies the command's context.
