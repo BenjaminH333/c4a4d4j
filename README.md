@@ -21,7 +21,7 @@ Commands are defined as static methods in a scanned class with annotations provi
 public static void commandSay(CmdCtx ctx, String message, @Omittable Integer repetitions) {
     if (repetitions == null)
         repetitions = 1;
-    for (int i = Math.max(repetitions, 1); i >= 0; i--)
+    for (int i = Math.max(repetitions, 1); i > 0; i--)
         ctx.getChannel().sendMessage(message);
 }
 ```
