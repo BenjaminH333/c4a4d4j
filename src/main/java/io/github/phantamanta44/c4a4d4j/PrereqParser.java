@@ -15,7 +15,7 @@ public class PrereqParser {
     }
 
     public Prerequisite<CmdCtx> getPrereq() {
-        if (prereq != null)
+        if (prereq == null)
             resolvePrereq();
         return prereq;
     }
