@@ -34,6 +34,10 @@ public class PrereqParser {
                     throw new IllegalArgumentException("No such permission: " + spec);
                 }
                 break;
+            case "guild":
+                boolean guildOnly = spec.equalsIgnoreCase("true");
+                Predicate<CmdCtx> test = c -> guildOnly ^ c.isPrivate();
+                prereq = new Prerequisite<>(test, guildOnly ? "This command only works in a server!" : "This command only works in a DM!");
         }
     }
 
