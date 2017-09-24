@@ -97,3 +97,8 @@ local.properties
 
 # Code Recommenders
 .recommenders/
+/gradlew.bat
+/gradlew
+/gradle/
+/.gradle/
+/build.gradle

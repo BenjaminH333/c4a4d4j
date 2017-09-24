@@ -152,7 +152,7 @@ public class ArgParser implements IArgumentTokenizer {
             tag = tag.substring(3, tag.length() - 1);
         else
             tag = tag.substring(2, tag.length() - 1);
-        IUser user = ctx.getClient().getUserByID(tag);
+        IUser user = ctx.getClient().getUserByID(Long.parseUnsignedLong(tag));
         if (user == null) {
             pos--;
             throw new InvalidSyntaxException(args, "Unknown user!");
@@ -166,7 +166,7 @@ public class ArgParser implements IArgumentTokenizer {
             pos--;
             throw new InvalidSyntaxException(args, "Expected channel tag!");
         }
-        IChannel chan = ctx.getClient().getChannelByID(tag.substring(2, tag.length() - 1));
+        IChannel chan = ctx.getClient().getChannelByID(Long.parseUnsignedLong(tag.substring(2, tag.length() - 1)));
         if (chan == null) {
             pos--;
             throw new InvalidSyntaxException(args, "Unknown channel!");

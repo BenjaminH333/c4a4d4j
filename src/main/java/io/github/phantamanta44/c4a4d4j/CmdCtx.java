@@ -1,14 +1,14 @@
 package io.github.phantamanta44.c4a4d4j;
 
+import java.time.ZoneId;
+
 import io.github.phantamanta44.commands4a.command.ICommandContext;
 import sx.blah.discord.api.IDiscordClient;
-import sx.blah.discord.handle.impl.events.MessageReceivedEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
-
-import java.time.ZoneId;
 
 public class CmdCtx implements ICommandContext {
 
