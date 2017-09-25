@@ -19,16 +19,41 @@ import sx.blah.discord.handle.obj.IUser;
 
 public class ArgParser implements IArgumentTokenizer {
 
-	private final String[] args;
+	private String[] args; // It's not final anymore so fight me.
 	private final CmdCtx ctx;
 	private final C4A4D4J engine;
 	private int pos;
 
-	public ArgParser(String[] args, CmdCtx ctx, C4A4D4J engine) {
-		this.args = args;
+	public ArgParser(String[] commandArgs, CmdCtx ctx, C4A4D4J engine) {
 		this.ctx = ctx;
 		this.engine = engine;
 		this.pos = 0;
+
+		// Ugly hacks because editing commands4a is off limits
+		// The goal is to combine all extra args all back into a single arg.
+		try {
+			String text = engine.trimUsingPrefixes(ctx.getMessageText());
+			String commandName = text.split(" ")[0];
+			CommandExecution<CmdCtx> cexec = getCommand(commandName);
+			int count = cexec.getExecutor().getParameterCount()-1; //-1 because CmdCtx arg
+			if (commandArgs.length > count) {
+				String[] newArgs = new String[count];
+				for (int i = 0; i < count - 1; i++) {
+					newArgs[i] = commandArgs[i];
+				}
+				String finalStr = "";
+				for (int i = count - 1; i < commandArgs.length; i++) {
+					finalStr += commandArgs[i] + " ";
+				}
+				newArgs[newArgs.length - 1] = finalStr.trim();
+				this.args = newArgs;
+			}else{
+				this.args = commandArgs;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			this.args = commandArgs;
+		}
 	}
 
 	@Override
@@ -72,8 +97,9 @@ public class ArgParser implements IArgumentTokenizer {
 		typeMap.put(IUser.class, ArgParser::nextUserTag);
 		typeMap.put(IChannel.class, ArgParser::nextChannelTag);
 		typeMap.put(CommandExecution.class, ArgParser::nextCommand);
-		// Ben's Additions
+		// Additions
 		typeMap.put(Byte.class, ArgParser::nextByte);
+		typeMap.put(Short.class, ArgParser::nextShort);
 	}
 
 	public InlineCodeBlock nextInlineCode() throws InvalidSyntaxException {
@@ -146,8 +172,36 @@ public class ArgParser implements IArgumentTokenizer {
 	public IUser nextUserTag() throws InvalidSyntaxException {
 		String tag = nextString();
 		if (!tag.startsWith("<@") || !tag.endsWith(">") || tag.charAt(2) == '&') {
+			// Normally, we'd call it quits here, but we wont.
+			// First, let's try to get an ID
+			try {
+				long id = Long.parseUnsignedLong(tag);
+				IUser user = ctx.getClient().getUserByID(id);
+				if (user != null) {
+					return user;
+				}
+			} catch (NumberFormatException nfe) {
+			}
+			// Okay, maybe they typed in someone's username
+			List<IUser> list = ctx.getUsersHere();
+			// Let's find someone based on their raw username first
+			for (int i = 0; i < list.size(); i++) {
+				IUser u = list.get(i);
+				if (u.getDisplayName(null).toLowerCase().startsWith(tag.toLowerCase())) {
+					return u;
+				}
+			}
+			// Last resort, check nicknames in the guild
+			for (int i = 0; i < list.size(); i++) {
+				IUser u = list.get(i);
+				if (u.getDisplayName(ctx.getGuild()).toLowerCase().startsWith(tag.toLowerCase())) {
+					return u;
+				}
+			}
+			// If we got here, that means that there is no user to be found
+			// after all.
 			pos--;
-			throw new InvalidSyntaxException(args, "Expected user tag!");
+			throw new InvalidSyntaxException(args, "Expected user! Got: " + tag);
 		}
 		if (tag.charAt(2) == '!')
 			tag = tag.substring(3, tag.length() - 1);
@@ -165,7 +219,7 @@ public class ArgParser implements IArgumentTokenizer {
 		String tag = nextString();
 		if (!tag.startsWith("<#") || !tag.endsWith(">")) {
 			pos--;
-			throw new InvalidSyntaxException(args, "Expected channel tag!");
+			throw new InvalidSyntaxException(args, "Expected channel tag! Got: " + tag);
 		}
 		IChannel chan = ctx.getClient().getChannelByID(Long.parseUnsignedLong(tag.substring(2, tag.length() - 1)));
 		if (chan == null) {
@@ -175,15 +229,10 @@ public class ArgParser implements IArgumentTokenizer {
 		return chan;
 	}
 
-	@SuppressWarnings("unchecked")
 	public CommandExecution<CmdCtx> nextCommand()
 			throws InvalidSyntaxException, IllegalAccessException, NoSuchFieldException {
 		String cmdName = nextString();
-		Field commandsField = CommandEngine.class.getDeclaredField("commands");
-		commandsField.setAccessible(true);
-		List<CommandExecution<CmdCtx>> commands = (List<CommandExecution<CmdCtx>>) commandsField.get(engine);
-		CommandExecution<CmdCtx> cmd = commands.stream().filter(c -> c.getCommand().name().equalsIgnoreCase(cmdName))
-				.findAny().orElse(null);
+		CommandExecution<CmdCtx> cmd = getCommand(cmdName);
 		if (cmd == null) {
 			pos--;
 			throw new InvalidSyntaxException(args, "Unknown command!");
@@ -191,13 +240,38 @@ public class ArgParser implements IArgumentTokenizer {
 		return cmd;
 	}
 
+	@SuppressWarnings("unchecked")
+	public CommandExecution<CmdCtx> getCommand(String cmdName)
+			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		Field commandsField = CommandEngine.class.getDeclaredField("commands");
+		commandsField.setAccessible(true);
+		List<CommandExecution<CmdCtx>> commands = (List<CommandExecution<CmdCtx>>) commandsField.get(engine);
+		CommandExecution<CmdCtx> cmd = commands.stream().filter(c -> c.getCommand().name().equalsIgnoreCase(cmdName))
+				.findAny().orElse(null);
+		if(cmd != null){
+			return cmd;
+		}
+		//Crazy new addition (weird this wasn't in vanilla c4a4d4j)
+		return engine.getAliasMap().get(cmdName);
+	}
+
 	public Byte nextByte() throws InvalidSyntaxException {
+		String str = nextString();
 		try {
-			String str = nextString();
 			return Byte.parseByte(str);
 		} catch (NumberFormatException e) {
 			pos--;
-			throw new InvalidSyntaxException(args, "Expected byte!");
+			throw new InvalidSyntaxException(args, "Expected byte! Got: " + str);
+		}
+	}
+
+	public Short nextShort() throws InvalidSyntaxException {
+		String str = nextString();
+		try {
+			return Short.parseShort(str);
+		} catch (NumberFormatException e) {
+			pos--;
+			throw new InvalidSyntaxException(args, "Expected Short! Got: " + str);
 		}
 	}
 }
