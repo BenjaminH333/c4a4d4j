@@ -34,8 +34,11 @@ public class ArgParser implements IArgumentTokenizer {
 		try {
 			String text = engine.trimUsingPrefixes(ctx.getMessageText());
 			String commandName = text.split(" ")[0];
-			CommandExecution<CmdCtx> cexec = getCommand(commandName);
-			int count = cexec.getExecutor().getParameterCount()-1; //-1 because CmdCtx arg
+			CommandExecution<CmdCtx> cexec = getCommand(commandName, engine);
+			int count = cexec.getExecutor().getParameterCount() - 1; // -1
+																		// because
+																		// CmdCtx
+																		// arg
 			if (commandArgs.length > count) {
 				String[] newArgs = new String[count];
 				for (int i = 0; i < count - 1; i++) {
@@ -47,7 +50,7 @@ public class ArgParser implements IArgumentTokenizer {
 				}
 				newArgs[newArgs.length - 1] = finalStr.trim();
 				this.args = newArgs;
-			}else{
+			} else {
 				this.args = commandArgs;
 			}
 		} catch (Exception e) {
@@ -62,8 +65,15 @@ public class ArgParser implements IArgumentTokenizer {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public <T> T nextOfType(Class<T> type) throws InvalidSyntaxException {
+		if (type.isEnum()) {
+			try {
+				return (T) Enum.valueOf((Class<Enum>) type, nextString());
+			} catch (Throwable e) {
+				throw new InvalidSyntaxException(args, "Invalid " + type.getSimpleName() + "!");
+			}
+		}
 		try {
 			return (T) typeMap.get(type).doApply(this);
 		} catch (IndexOutOfBoundsException e) {
@@ -115,7 +125,7 @@ public class ArgParser implements IArgumentTokenizer {
 				sb.append(' ').append(nextString());
 			else {
 				pos = start;
-				throw new InvalidSyntaxException(args, "Expected inline code block!!");
+				throw new InvalidSyntaxException(args, "Expected inline code block!");
 			}
 		}
 		return new InlineCodeBlock(sb.substring(1, sb.length() - 1));
@@ -219,7 +229,7 @@ public class ArgParser implements IArgumentTokenizer {
 		String tag = nextString();
 		if (!tag.startsWith("<#") || !tag.endsWith(">")) {
 			pos--;
-			throw new InvalidSyntaxException(args, "Expected channel tag! Got: " + tag);
+			throw new InvalidSyntaxException(args, "Expected channel! Got: " + tag);
 		}
 		IChannel chan = ctx.getClient().getChannelByID(Long.parseUnsignedLong(tag.substring(2, tag.length() - 1)));
 		if (chan == null) {
@@ -232,7 +242,7 @@ public class ArgParser implements IArgumentTokenizer {
 	public CommandExecution<CmdCtx> nextCommand()
 			throws InvalidSyntaxException, IllegalAccessException, NoSuchFieldException {
 		String cmdName = nextString();
-		CommandExecution<CmdCtx> cmd = getCommand(cmdName);
+		CommandExecution<CmdCtx> cmd = getCommand(cmdName, engine);
 		if (cmd == null) {
 			pos--;
 			throw new InvalidSyntaxException(args, "Unknown command!");
@@ -241,17 +251,17 @@ public class ArgParser implements IArgumentTokenizer {
 	}
 
 	@SuppressWarnings("unchecked")
-	public CommandExecution<CmdCtx> getCommand(String cmdName)
+	public static CommandExecution<CmdCtx> getCommand(String cmdName, CommandEngine<CmdCtx> engine)
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		Field commandsField = CommandEngine.class.getDeclaredField("commands");
 		commandsField.setAccessible(true);
 		List<CommandExecution<CmdCtx>> commands = (List<CommandExecution<CmdCtx>>) commandsField.get(engine);
 		CommandExecution<CmdCtx> cmd = commands.stream().filter(c -> c.getCommand().name().equalsIgnoreCase(cmdName))
 				.findAny().orElse(null);
-		if(cmd != null){
+		if (cmd != null) {
 			return cmd;
 		}
-		//Crazy new addition (weird this wasn't in vanilla c4a4d4j)
+		// Crazy new addition (weird this wasn't in vanilla c4a4d4j)
 		return engine.getAliasMap().get(cmdName);
 	}
 
