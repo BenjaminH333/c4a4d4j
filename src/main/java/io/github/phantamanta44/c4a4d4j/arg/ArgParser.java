@@ -35,11 +35,8 @@ public class ArgParser implements IArgumentTokenizer {
 			String text = engine.trimUsingPrefixes(ctx.getMessageText());
 			String commandName = text.split(" ")[0];
 			CommandExecution<CmdCtx> cexec = getCommand(commandName, engine);
-			int count = cexec.getExecutor().getParameterCount() - 1; // -1
-																		// because
-																		// CmdCtx
-																		// arg
-			if (commandArgs.length > count) {
+			int count = cexec.getExecutor().getParameterCount() - 1;
+			if (commandArgs.length > count && count > 0) {
 				String[] newArgs = new String[count];
 				for (int i = 0; i < count - 1; i++) {
 					newArgs[i] = commandArgs[i];
@@ -110,6 +107,7 @@ public class ArgParser implements IArgumentTokenizer {
 		// Additions
 		typeMap.put(Byte.class, ArgParser::nextByte);
 		typeMap.put(Short.class, ArgParser::nextShort);
+		typeMap.put(Boolean.class, ArgParser::nextBoolean);
 	}
 
 	public InlineCodeBlock nextInlineCode() throws InvalidSyntaxException {
@@ -282,6 +280,21 @@ public class ArgParser implements IArgumentTokenizer {
 		} catch (NumberFormatException e) {
 			pos--;
 			throw new InvalidSyntaxException(args, "Expected Short! Got: " + str);
+		}
+	}
+	
+	public Boolean nextBoolean() throws InvalidSyntaxException {
+		String str = nextString();
+		switch(str.toLowerCase()){
+		case "true":
+		case "t":
+		case "1":
+		case "yes":
+		case "y":
+		case "on":
+			return true;
+		default:
+			return false;
 		}
 	}
 }
