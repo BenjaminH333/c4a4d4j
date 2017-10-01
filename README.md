@@ -46,10 +46,12 @@ These are the possible types for automatic command argument resolvation:
 * `CodeBlock`
 * `InlineCodeBlock`
 * `CommandExecution`
+
 The following are also given support in these additions:
 * `Byte`
 * `Short`
-* Any `Enum` class, even ones that you create
+* `Boolean`
+* Any `Enum` type, even random ones that you create
 
 
 There are also some special arguments that aren't parsed from the user's input, but instead supply data about the command execution environment.
@@ -59,8 +61,8 @@ There are also some special arguments that aren't parsed from the user's input, 
 ### Some Improvements Made: ###
 * Complies with the most recent version of Discord4J (as of writing: 2.9)
 * New argument types (shown above)
-* `IUser` resolvation in commands has also been improved. The users using your bot can now pass the user's userid, the user's name, or the user's nickname and they all automagically get resolved. Therefore, 'pinging' someone is not necessary to run a command anymore
-* An ugly hack was developed allowing excess arguments near the end are put back together into a single argument. This only works if your prefixes (shown above) are set up correctly.
+* `IUser` resolvation in commands has also been improved. The people using your bot can now pass any user's id, the user's name, or the user's nickname in the server and they all automagically get resolved. Therefore, 'pinging' someone is not necessary to run a command anymore
+* An ugly hack was developed allowing excess arguments near the end to be put back together into a single argument. This only works if your prefixes (shown above) are set up correctly.
 * More fields and information in `CmdCtx` classes.
 There may be more...
 

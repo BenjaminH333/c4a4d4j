@@ -66,7 +66,15 @@ public class ArgParser implements IArgumentTokenizer {
 	public <T> T nextOfType(Class<T> type) throws InvalidSyntaxException {
 		if (type.isEnum()) {
 			try {
-				return (T) Enum.valueOf((Class<Enum>) type, nextString());
+				String str = nextString();
+				T ret = (T) Enum.valueOf((Class<Enum>) type, str);
+				if(ret == null){
+					ret = (T) Enum.valueOf((Class<Enum>) type, str.toUpperCase());
+				}
+				if(ret == null){
+					ret = (T) Enum.valueOf((Class<Enum>) type, str.toLowerCase());
+				}
+				return ret;
 			} catch (Throwable e) {
 				throw new InvalidSyntaxException(args, "Invalid " + type.getSimpleName() + "!");
 			}
