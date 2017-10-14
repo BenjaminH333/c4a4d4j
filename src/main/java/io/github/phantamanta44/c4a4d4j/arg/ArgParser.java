@@ -15,6 +15,7 @@ import io.github.phantamanta44.commands4a.command.CommandExecution;
 import io.github.phantamanta44.commands4a.exception.CommandExecutionException;
 import io.github.phantamanta44.commands4a.exception.InvalidSyntaxException;
 import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.IRole;
 import sx.blah.discord.handle.obj.IUser;
 
 public class ArgParser implements IArgumentTokenizer {
@@ -65,17 +66,28 @@ public class ArgParser implements IArgumentTokenizer {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public <T> T nextOfType(Class<T> type) throws InvalidSyntaxException {
 		if (type.isEnum()) {
-			try {
-				String str = nextString();
-				T ret = (T) Enum.valueOf((Class<Enum>) type, str);
-				if(ret == null){
-					ret = (T) Enum.valueOf((Class<Enum>) type, str.toUpperCase());
+			String str = nextString();
+			T ret = (T) valueOf((Class<Enum>) type, str);
+			if (ret == null) {
+				ret = (T) valueOf((Class<Enum>) type, str.toUpperCase());
+			}
+			if (ret == null) {
+				ret = (T) valueOf((Class<Enum>) type, str.toLowerCase());
+			}
+			if (ret == null) {
+				try {
+					int id = Integer.parseInt(str);
+					// Ugly hacks
+					ret = (T) ((Object[]) type.getDeclaredMethod("values", new Class[] {}).invoke(null,
+							new Object[] {}))[id];
+				} catch (Exception e) {
+					e.printStackTrace();
+					// Failure is to be expected
 				}
-				if(ret == null){
-					ret = (T) Enum.valueOf((Class<Enum>) type, str.toLowerCase());
-				}
+			}
+			if (ret != null) {
 				return ret;
-			} catch (Throwable e) {
+			} else {
 				throw new InvalidSyntaxException(args, "Invalid " + type.getSimpleName() + "!");
 			}
 		}
@@ -87,6 +99,15 @@ public class ArgParser implements IArgumentTokenizer {
 			throw e;
 		} catch (Throwable e) {
 			throw new CommandExecutionException(e);
+		}
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private <T> T valueOf(Class<T> type, String name) {
+		try{
+			return (T) Enum.valueOf((Class<Enum>) type, name);
+		}catch(Exception e){
+			return null;
 		}
 	}
 
@@ -116,6 +137,7 @@ public class ArgParser implements IArgumentTokenizer {
 		typeMap.put(Byte.class, ArgParser::nextByte);
 		typeMap.put(Short.class, ArgParser::nextShort);
 		typeMap.put(Boolean.class, ArgParser::nextBoolean);
+		typeMap.put(IRole.class, ArgParser::nextRole);
 	}
 
 	public InlineCodeBlock nextInlineCode() throws InvalidSyntaxException {
@@ -290,10 +312,10 @@ public class ArgParser implements IArgumentTokenizer {
 			throw new InvalidSyntaxException(args, "Expected Short! Got: " + str);
 		}
 	}
-	
+
 	public Boolean nextBoolean() throws InvalidSyntaxException {
 		String str = nextString();
-		switch(str.toLowerCase()){
+		switch (str.toLowerCase()) {
 		case "true":
 		case "t":
 		case "1":
@@ -304,5 +326,33 @@ public class ArgParser implements IArgumentTokenizer {
 		default:
 			return false;
 		}
+	}
+
+	public IRole nextRole() throws InvalidSyntaxException {
+		String tag = nextString();
+		// This will be similar to getting a user
+		// First, let's try to get an ID
+		try {
+			long id = Long.parseUnsignedLong(tag);
+			IRole role = ctx.getClient().getRoleByID(id);
+			if (role != null) {
+				if (ctx.getGuild().getRoles().contains(role)) {
+					return role;
+				}
+			}
+		} catch (NumberFormatException nfe) {
+		}
+		// Okay, maybe they typed in a role's name
+		List<IRole> list = ctx.getGuild().getRoles();
+		for (int i = 0; i < list.size(); i++) {
+			IRole r = list.get(i);
+			if (r.getName().toLowerCase().startsWith(tag.toLowerCase())) {
+				return r;
+			}
+		}
+		// If we got here, that means that there is no role to be found
+		// after all.
+		pos--;
+		throw new InvalidSyntaxException(args, "Expected Role! Got: " + tag);
 	}
 }
