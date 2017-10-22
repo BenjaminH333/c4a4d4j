@@ -70,7 +70,7 @@ public class CmdCtx implements ICommandContext, Cloneable {
 	}
 
 	public boolean isPrivate() {
-		return msg.getChannel().isPrivate();
+		return isPrivateChannel();
 	}
 
 	public List<IUser> getUsersHere() {
